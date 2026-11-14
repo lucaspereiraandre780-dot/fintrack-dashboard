@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinTrack | Controle Financeiro Pessoal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    /* Customização sutil da barra de rolagem */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Cabeçalho -->
+  <header class="border-b border-slate-800 bg-slate-950/60 backdrop-blur-md sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-slate-950">F</div>
+        <h1 class="text-xl font-bold tracking-tight">Fin<span class="text-emerald-400">Track</span></h1>
+      </div>
+      <button id="clear-data-btn" class="text-xs text-slate-400 hover:text-rose-400 transition cursor-pointer">
+        Limpar Dados
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    
+    <!-- Cards de Resumo -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+        <p class="text-sm text-slate-400 font-medium">Entradas</p>
+        <p id="total-income" class="text-2xl font-bold text-emerald-400 mt-2">R$ 0,00</p>
+      </div>
+      <div class="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+        <p class="text-sm text-slate-400 font-medium">Saídas</p>
+        <p id="total-expense" class="text-2xl font-bold text-rose-400 mt-2">R$ 0,00</p>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-lg">
+        <p class="text-sm text-slate-400 font-medium">Saldo Atual</p>
+        <p id="total-balance" class="text-2xl font-bold text-white mt-2">R$ 0,00</p>
+      </div>
+    </section>
+
+    <!-- Área Principal: Formulário + Gráfico -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Nova Transação -->
+      <div class="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl lg:col-span-1">
+        <h2 class="text-lg font-semibold mb-4">Nova Transação</h2>
+        <form id="transaction-form" class="space-y-4">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Descrição</label>
+            <input type="text" id="desc" required placeholder="Ex: Salário, Mercado, Aluguel"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Valor (R$)</label>
+              <input type="number" id="amount" step="0.01" min="0.01" required placeholder="0,00"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Tipo</label>
+              <select id="type"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                <option value="income">Entrada (+)</option>
+                <option value="expense">Saída (-)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Categoria</label>
+            <select id="category"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+              <option value="Salário">Salário / Renda</option>
+              <option value="Alimentação">Alimentação</option>
+              <option value="Moradia">Moradia</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Lazer">Lazer</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+
+          <button type="submit"
+            class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold py-2.5 rounded-lg transition cursor-pointer">
+            Adicionar Transação
+          </button>
+        </form>
+      </div>
+
+      <!-- Gráfico de Despesas por Categoria -->
+      <div class="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl lg:col-span-2 flex flex-col justify-between">
+        <h2 class="text-lg font-semibold mb-4">Distribuição de Saídas por Categoria</h2>
+        <div class="relative h-64 w-full flex items-center justify-center">
+          <canvas id="expense-chart"></canvas>
+          <p id="empty-chart-msg" class="text-sm text-slate-500 hidden">Adicione uma saída para visualizar o gráfico.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Histórico de Transações -->
+    <section class="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 class="text-lg font-semibold">Histórico de Movimentações</h2>
+        <select id="filter-category"
+          class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500">
+          <option value="ALL">Todas as Categorias</option>
+          <option value="Salário">Salário / Renda</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Moradia">Moradia</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
+              <th class="py-3 px-4">Descrição</th>
+              <th class="py-3 px-4">Categoria</th>
+              <th class="py-3 px-4">Data</th>
+              <th class="py-3 px-4 text-right">Valor</th>
+              <th class="py-3 px-4 text-center">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-list" class="divide-y divide-slate-800 text-sm">
+            <!-- Itens renderizados via JS -->
+          </tbody>
+        </table>
+        <p id="empty-list-msg" class="text-center text-slate-500 py-8 text-sm">Nenhuma transação encontrada.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let transactions = JSON.parse(localStorage.getItem('fintrack_transactions')) || [];
+    let expenseChart = null;
+
+    const form = document.getElementById('transaction-form');
+    const descInput = document.getElementById('desc');
+    const amountInput = document.getElementById('amount');
+    const typeInput = document.getElementById('type');
+    const categoryInput = document.getElementById('category');
+    const filterSelect = document.getElementById('filter-category');
+    const listEl = document.getElementById('transaction-list');
+    const emptyListMsg = document.getElementById('empty-list-msg');
+    const emptyChartMsg = document.getElementById('empty-chart-msg');
+    const clearBtn = document.getElementById('clear-data-btn');
+
+    const incomeEl = document.getElementById('total-income');
+    const expenseEl = document.getElementById('total-expense');
+    const balanceEl = document.getElementById('total-balance');
+
+    function formatCurrency(value) {
+      return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function saveTransactions() {
+      localStorage.setItem('fintrack_transactions', JSON.stringify(transactions));
+    }
+
+    function updateSummary() {
+      const income = transactions
+        .filter(t => t.type === 'income')
+        .reduce((acc, t) => acc + t.amount, 0);
+
+      const expense = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((acc, t) => acc + t.amount, 0);
+
+      const balance = income - expense;
+
+      incomeEl.textContent = formatCurrency(income);
+      expenseEl.textContent = formatCurrency(expense);
+      balanceEl.textContent = formatCurrency(balance);
+
+      balanceEl.className = `text-2xl font-bold mt-2 ${
+        balance >= 0 ? 'text-white' : 'text-rose-400'
+      }`;
+    }
+
+    function renderTransactions() {
+      const filter = filterSelect.value;
+      const filtered = filter === 'ALL'
+        ? transactions
+        : transactions.filter(t => t.category === filter);
+
+      listEl.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyListMsg.classList.remove('hidden');
+        return;
+      }
+
+      emptyListMsg.classList.add('hidden');
+
+      filtered.slice().reverse().forEach(t => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+
+        const isIncome = t.type === 'income';
+        const amountClass = isIncome ? 'text-emerald-400' : 'text-rose-400';
+        const sign = isIncome ? '+' : '-';
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-medium">${t.desc}</td>
+          <td class="py-3 px-4">
+            <span class="bg-slate-700/60 text-slate-300 text-xs px-2.5 py-1 rounded-full">
+              ${t.category}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-400">${t.date}</td>
+          <td class="py-3 px-4 text-right font-semibold ${amountClass}">
+            ${sign} ${formatCurrency(t.amount)}
+          </td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="deleteTransaction(${t.id})" class="text-slate-500 hover:text-rose-400 transition cursor-pointer" title="Excluir">
+              ✕
+            </button>
+          </td>
+        `;
+        listEl.appendChild(tr);
+      });
+    }
+
+    function updateChart() {
+      const expenses = transactions.filter(t => t.type === 'expense');
+      const canvas = document.getElementById('expense-chart');
+
+      if (expenses.length === 0) {
+        canvas.classList.add('hidden');
+        emptyChartMsg.classList.remove('hidden');
+        return;
+      }
+
+      canvas.classList.remove('hidden');
+      emptyChartMsg.classList.add('hidden');
+
+      const totalsByCategory = {};
+      expenses.forEach(t => {
+        totalsByCategory[t.category] = (totalsByCategory[t.category] || 0) + t.amount;
+      });
+
+      const labels = Object.keys(totalsByCategory);
+      const data = Object.values(totalsByCategory);
+
+      if (expenseChart) {
+        expenseChart.destroy();
+      }
+
+      expenseChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: ['#f43f5e', '#3b82f6', '#eab308', '#a855f7', '#10b981', '#64748b'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { color: '#cbd5e1', font: { size: 12 } }
+            }
+          }
+        }
+      });
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const newTransaction = {
+        id: Date.now(),
+        desc: descInput.value.trim(),
+        amount: parseFloat(amountInput.value),
+        type: typeInput.value,
+        category: categoryInput.value,
+        date: new Date().toLocaleDateString('pt-BR')
+      };
+
+      transactions.push(newTransaction);
+      saveTransactions();
+      updateUI();
+      form.reset();
+    });
+
+    window.deleteTransaction = function(id) {
+      transactions = transactions.filter(t => t.id !== id);
+      saveTransactions();
+      updateUI();
+    };
+
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Tem certeza que deseja apagar todas as transações?')) {
+        transactions = [];
+        saveTransactions();
+        updateUI();
+      }
+    });
+
+    filterSelect.addEventListener('change', renderTransactions);
+
+    function updateUI() {
+      updateSummary();
+      renderTransactions();
+      updateChart();
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
